@@ -55,6 +55,13 @@ class ProcessingOptions:
     jpg_quality: int = 95
     export_mask: bool = False
 
+    # rembg options (CLI-like defaults: -a -ae 15 -m isnet-general-use)
+    rembg_model: str = "isnet-general-use"
+    alpha_matting: bool = True
+    alpha_matting_erode_size: int = 15
+    alpha_matting_foreground_threshold: int = 240
+    alpha_matting_background_threshold: int = 10
+
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "ProcessingOptions":
         opts = ProcessingOptions()
@@ -67,13 +74,24 @@ class ProcessingOptions:
 class ImageProcessor:
     def __init__(self, model_dir: Optional[str] = None):
         self.model_dir = model_dir
-        self._rembg_session = None
-        if new_session is not None:
-            try:
-                self._rembg_session = new_session("u2net")
-            except Exception:
-                self._rembg_session = None
+        self._sessions: Dict[str, Any] = {}
         self._realesrgan_model = None
+
+    def _get_session(self, model_name: str):
+        if new_session is None:
+            return None
+        if model_name in self._sessions:
+            return self._sessions[model_name]
+        try:
+            sess = new_session(model_name)
+        except Exception:
+            # Fallback to u2net if requested model not found
+            try:
+                sess = new_session("u2net")
+            except Exception:
+                sess = None
+        self._sessions[model_name] = sess
+        return sess
 
     def image_to_base64(self, image: Image.Image, format: str = "PNG") -> str:
         buf = io.BytesIO()
@@ -96,16 +114,22 @@ class ImageProcessor:
             return (r, g, b, 255)
         raise ValueError("Invalid color hex")
 
-    def remove_background(self, image: Image.Image) -> Tuple[Image.Image, Image.Image]:
+    def remove_background(self, image: Image.Image, opts: Optional[ProcessingOptions] = None) -> Tuple[Image.Image, Image.Image]:
         if remove is None:
             raise RuntimeError("rembg is not installed")
-        session = self._rembg_session
-        out = remove(image, session=session)
+        if opts is None:
+            opts = ProcessingOptions()
+        session = self._get_session(opts.rembg_model)
+        out = remove(
+            image,
+            session=session,
+            alpha_matting=opts.alpha_matting,
+            alpha_matting_erode_size=opts.alpha_matting_erode_size,
+            alpha_matting_foreground_threshold=opts.alpha_matting_foreground_threshold,
+            alpha_matting_background_threshold=opts.alpha_matting_background_threshold,
+        )
         rgba = out.convert("RGBA")
-        # mask is alpha channel
         alpha = rgba.split()[-1]
-        mask = Image.merge("LA", (alpha, alpha))
-        mask = mask.convert("RGBA")
         return rgba, alpha
 
     def _resize_if_needed(self, image: Image.Image, opts: ProcessingOptions) -> Image.Image:

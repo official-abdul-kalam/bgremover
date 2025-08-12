@@ -15,9 +15,18 @@ const state = {
   },
   jobId: null,
   dividerX: 0.5,
+  aborter: null,
+  debounceTimer: null,
 };
 
 function $(sel){ return document.querySelector(sel); }
+
+function debounce(fn, ms){
+  return (...args) => {
+    clearTimeout(state.debounceTimer);
+    state.debounceTimer = setTimeout(() => fn(...args), ms);
+  };
+}
 
 function setTheme(light){
   if(light) document.body.classList.add('light');
@@ -46,14 +55,20 @@ async function uploadFiles(files){
   $('#afterImg').src = j.preview;
 }
 
-async function refreshPreview(){
+const refreshPreview = debounce(async () => {
   if(!state.currentId) return;
-  const payload = { fileId: state.currentId, options: state.options };
-  const res = await fetch('/api/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  const j = await res.json();
-  if(!res.ok) throw new Error(j.error || 'Preview failed');
-  $('#afterImg').src = j.preview;
-}
+  try {
+    if(state.aborter) state.aborter.abort();
+    state.aborter = new AbortController();
+    const payload = { fileId: state.currentId, options: state.options, fast: true };
+    const res = await fetch('/api/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: state.aborter.signal });
+    const j = await res.json();
+    if(!res.ok) throw new Error(j.error || 'Preview failed');
+    $('#afterImg').src = j.preview;
+  } catch(e) {
+    // ignore abort errors
+  }
+}, 150);
 
 function setupDragDrop(){
   const drop = $('#dropArea');
@@ -75,50 +90,49 @@ function setupControls(){
     e.currentTarget.classList.add('active');
     const mode = e.currentTarget.getAttribute('data-bg');
     state.options.background_mode = mode;
-    await refreshPreview();
+    refreshPreview();
   }));
   // background color
   $('#bgColor').addEventListener('change', async e => {
     const hex = e.target.value;
     state.options.background_color = hex + 'ff';
-    await refreshPreview();
+    refreshPreview();
   });
   // background image
   $('#btnBgImage').onclick = () => $('#bgImage').click();
   $('#bgImage').addEventListener('change', async e => {
     if(!e.target.files.length) return;
-    // Upload bg image as normal to reuse storage; take first id as background_image_id
     const fd = new FormData();
     fd.append('files', e.target.files[0]);
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const j = await res.json();
     state.options.background_image_id = j.fileIds[0];
-    await refreshPreview();
+    refreshPreview();
   });
   // effects
-  $('#blurRange').addEventListener('input', async e => { state.options.blur_background = Number(e.target.value); await refreshPreview(); });
-  $('#shadowToggle').addEventListener('change', async e => { state.options.add_shadow = e.target.checked; await refreshPreview(); });
-  $('#glowToggle').addEventListener('change', async e => { state.options.add_glow = e.target.checked; await refreshPreview(); });
-  $('#arStyle').addEventListener('change', async e => { state.options.ar_style = e.target.value; await refreshPreview(); });
-  $('#upscale').addEventListener('change', async e => { state.options.upscale = Number(e.target.value); await refreshPreview(); });
-  $('#format').addEventListener('change', async e => { state.options.output_format = e.target.value; await refreshPreview(); });
+  $('#blurRange').addEventListener('input', e => { state.options.blur_background = Number(e.target.value); refreshPreview(); });
+  $('#shadowToggle').addEventListener('change', e => { state.options.add_shadow = e.target.checked; refreshPreview(); });
+  $('#glowToggle').addEventListener('change', e => { state.options.add_glow = e.target.checked; refreshPreview(); });
+  $('#arStyle').addEventListener('change', e => { state.options.ar_style = e.target.value; refreshPreview(); });
+  $('#upscale').addEventListener('change', e => { state.options.upscale = Number(e.target.value); refreshPreview(); });
+  $('#format').addEventListener('change', e => { state.options.output_format = e.target.value; refreshPreview(); });
   $('#exportMask').addEventListener('change', e => { state.options.export_mask = e.target.checked; });
 
   // resolution
   const w = $('#outWidth');
   const h = $('#outHeight');
-  $('#btnUseOriginal').addEventListener('click', async () => {
+  $('#btnUseOriginal').addEventListener('click', () => {
     const before = $('#beforeImg');
     if(before.naturalWidth && before.naturalHeight){
       w.value = before.naturalWidth;
       h.value = before.naturalHeight;
       state.options.output_width = before.naturalWidth;
       state.options.output_height = before.naturalHeight;
-      await refreshPreview();
+      refreshPreview();
     }
   });
-  w.addEventListener('change', async e => { const v = Number(e.target.value)||null; state.options.output_width = v; await refreshPreview(); });
-  h.addEventListener('change', async e => { const v = Number(e.target.value)||null; state.options.output_height = v; await refreshPreview(); });
+  w.addEventListener('change', e => { const v = Number(e.target.value)||null; state.options.output_width = v; refreshPreview(); });
+  h.addEventListener('change', e => { const v = Number(e.target.value)||null; state.options.output_height = v; refreshPreview(); });
 
   // jpg quality
   const jq = $('#jpgQuality');
@@ -126,7 +140,6 @@ function setupControls(){
   jq.addEventListener('input', e => { jqv.textContent = e.target.value; state.options.jpg_quality = Number(e.target.value); });
 
   $('#btnSave').addEventListener('click', async () => {
-    // Process only current
     if(!state.currentId) return;
     const res = await fetch('/api/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileIds: [state.currentId], options: state.options }) });
     const j = await res.json();
@@ -176,7 +189,6 @@ async function pollJob(){
   $('#progressBar').style.width = pct + '%';
   $('#progressText').textContent = pct + '%';
   if(j.status === 'finished' && j.zip){
-    // Auto download
     const a = document.createElement('a'); a.href = `/download/${j.zip}`; a.download = j.zip; document.body.appendChild(a); a.click(); a.remove();
     state.jobId = null;
     setTimeout(() => { $('#progressWrap').style.display = 'none'; $('#progressBar').style.width = '0%'; $('#progressText').textContent = '0%'; }, 800);
@@ -187,7 +199,7 @@ async function pollJob(){
     state.jobId = null;
     return;
   }
-  setTimeout(pollJob, 600);
+  setTimeout(pollJob, 500);
 }
 
 function init(){

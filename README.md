@@ -99,6 +99,32 @@ dpkg-deb --build build-deb
 ```
 Install with `sudo dpkg -i build-deb.deb`.
 
+## Electron Desktop App
+This project can run as a desktop app using Electron. The Electron shell starts the Python backend and loads the UI.
+
+### Setup
+```
+cd electron
+npm install
+```
+
+### Run
+```
+npm start
+```
+
+### Build
+```
+npm run build
+```
+
+Electron uses the backend at `http://127.0.0.1:7860` by launching `python app.py`. Adjust the command in `electron/main.js` if you need a different Python path. For packaged binaries, point to your PyInstaller onefile binary instead of `python app.py`.
+
+### Rembg settings
+- Default model: `isnet-general-use`
+- Alpha matting enabled with erode size 15, tuned thresholds
+- You can change these in the UI later or via `ProcessingOptions`.
+
 ## Notes
 - First run of rembg or realesrgan may attempt to download models. For fully offline, ensure models are present in `models/` and `weights/` folders before running.
 - To reduce footprint, comment out `realesrgan` and `torch` in `requirements.txt` if you do not need upscaling.

@@ -12,3 +12,7 @@ dist/
 .vscode/
 /data/uploads/
 /data/outputs/
+node_modules/
+/electron/node_modules/
+/electron/dist/
+/electron/out/
