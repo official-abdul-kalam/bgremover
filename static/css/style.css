@@ -144,6 +144,76 @@ label { color: var(--text-dim); font-size: 14px; }
 .seg { padding: 10px 14px; }
 input[type="range"]{ touch-action: none; }
 
+/* Premium inputs for Output and controls */
+.controls select,
+.controls input[type="number"],
+.controls input[type="text"] {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--panel-stroke);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.controls select:hover,
+.controls input[type="number"]:hover,
+.controls input[type="text"]:hover {
+  background: rgba(255,255,255,0.08);
+}
+.controls select:focus,
+.controls input[type="number"]:focus,
+.controls input[type="text"]:focus {
+  border-color: rgba(167,139,250,0.6);
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.25);
+}
+
+/* Color input */
+.controls input[type="color"] {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--panel-stroke);
+  background: rgba(255,255,255,0.06); padding: 0; overflow: hidden;
+}
+.controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
+
+/* Toggle (checkbox) */
+.controls input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: #22d3ee; cursor: pointer;
+}
+
+/* Range sliders */
+.controls input[type="range"] {
+  -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px;
+  background: linear-gradient(90deg, rgba(167,139,250,0.7), rgba(34,211,238,0.7));
+  outline: none; border: 1px solid var(--panel-stroke);
+}
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #e2e8f0);
+  border: 2px solid rgba(0,0,0,0.15);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  cursor: pointer;
+}
+.controls input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,0.15);
+}
+
+/* Number inputs: hide spinners (webkit) */
+.controls input[type="number"]::-webkit-outer-spin-button,
+.controls input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.controls input[type="number"] { -moz-appearance: textfield; }
+
+/* Output group chips look */
+#format, #upscale {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--panel-stroke);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+/* Resolution inputs alignment on small screens */
 @media (max-width: 640px) {
   .nav { padding: 12px; }
   .container { padding: 0 12px 12px; }
@@ -151,4 +221,24 @@ input[type="range"]{ touch-action: none; }
   .controls { gap: 10px; }
   .control-row { gap: 10px; }
   .divider { width: 4px; }
+  .controls .control-row > * { flex: 1 1 auto; }
+  #outWidth, #outHeight { width: 100% !important; }
+}
+
+/* Footer credits and subscribe line (no HTML changes) */
+.footer::after {
+  content: "\A Crafted by TerminalMentor • Follow on Instagram @terminalmentor • YouTube: TerminalMentor • Please subscribe for more!";
+  white-space: pre-wrap;
+  display: block;
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Make Output summary stand out */
+.control-group details[open] > summary {
+  color: transparent;
+  background: var(--primary);
+  -webkit-background-clip: text; background-clip: text;
 }
