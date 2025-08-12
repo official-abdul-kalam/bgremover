@@ -14,43 +14,75 @@
         <div class="title">BG Remover Pro</div>
       </div>
       <div class="actions">
-        <button id="toggleTheme" class="btn ghost">Toggle Theme</button>
-        <a href="https://" target="_blank" rel="noopener" class="btn ghost hidden">Help</a>
+        <button id="toggleTheme" class="btn ghost" title="Toggle light/dark">Theme</button>
       </div>
     </header>
 
+    <section class="panel toolbar">
+      <div class="toolbar-left">
+        <button id="btnBrowse" class="btn primary" title="Upload images">⬆️ Upload</button>
+        <div class="divider-dot"></div>
+        <button class="btn" data-preset="product" title="Preset: Product">🧺 Product</button>
+        <button class="btn" data-preset="portrait" title="Preset: Portrait">🧑 Portrait</button>
+        <button class="btn" data-preset="neon" title="Preset: Neon Pop">💡 Neon</button>
+        <button class="btn" data-preset="holo" title="Preset: Hologram">🌈 Holo</button>
+      </div>
+      <div class="toolbar-right">
+        <button id="btnSave" class="btn success" title="Save current">💾 Save</button>
+        <button id="btnProcessAll" class="btn gradient" title="Process batch">⚙️ Batch</button>
+      </div>
+    </section>
+
     <main class="container">
-      <section class="panel upload" id="dropArea">
-        <input id="fileInput" type="file" accept="image/*" multiple hidden />
-        <div class="upload-inner">
-          <div class="upload-icon">📤</div>
-          <div class="upload-title">Drag & Drop Images</div>
-          <div class="upload-sub">or</div>
-          <button id="btnBrowse" class="btn primary">Upload Images</button>
-          <div class="upload-note">PNG/JPG • Offline Processing</div>
+      <section class="panel sidebar">
+        <div class="upload" id="dropArea">
+          <input id="fileInput" type="file" accept="image/*" multiple hidden />
+          <div class="upload-inner">
+            <div class="upload-icon">📤</div>
+            <div class="upload-title">Drag & Drop Images</div>
+            <div class="upload-sub">or</div>
+            <button id="btnBrowseGhost" class="btn">Choose Files</button>
+            <div class="upload-note">PNG/JPG • Offline</div>
+          </div>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+
+      <section class="panel preview">
+        <div class="compare" id="compare">
+          <img id="beforeImg" alt="Before" />
+          <div class="divider" id="divider"><div class="knob"></div></div>
+          <img id="afterImg" alt="After" />
+        </div>
+        <div class="progress" id="progressWrap">
+          <div class="bar" id="progressBar"></div>
+          <div class="text" id="progressText">0%</div>
         </div>
       </section>
 
       <section class="panel controls">
-        <div class="control-row">
-          <label>Background</label>
-          <div class="segmented">
-            <button data-bg="transparent" class="seg active">Transparent</button>
-            <button data-bg="color" class="seg">Color</button>
-            <button data-bg="image" class="seg">Image</button>
-          </div>
-          <input type="color" id="bgColor" value="#000000" />
-          <input type="file" id="bgImage" accept="image/*" hidden />
-          <button id="btnBgImage" class="btn">Choose Image</button>
-        </div>
-        <div class="control-row">
-          <label>Effects</label>
-          <div class="effects">
-            <div class="effect">
+        <div class="control-group">
+          <details open>
+            <summary>Background</summary>
+            <div class="control-row">
+              <div class="segmented">
+                <button data-bg="transparent" class="seg active">Transparent</button>
+                <button data-bg="color" class="seg">Color</button>
+                <button data-bg="image" class="seg">Image</button>
+              </div>
+              <input type="color" id="bgColor" value="#000000" />
+              <input type="file" id="bgImage" accept="image/*" hidden />
+              <button id="btnBgImage" class="btn">Choose Image</button>
+            </div>
+          </details>
+
+          <details open>
+            <summary>Effects</summary>
+            <div class="control-row">
               <span>Blur BG</span>
               <input id="blurRange" type="range" min="0" max="40" step="1" value="0" />
             </div>
-            <div class="effect">
+            <div class="control-row">
               <label><input id="shadowToggle" type="checkbox" /> Shadow</label>
               <label><input id="glowToggle" type="checkbox" /> Glow</label>
               <select id="arStyle">
@@ -60,57 +92,71 @@
                 <option value="bokeh">AR: Bokeh</option>
               </select>
             </div>
-          </div>
-        </div>
-        <div class="control-row">
-          <label>Upscale</label>
-          <select id="upscale">
-            <option value="1">1x</option>
-            <option value="2">2x</option>
-            <option value="4">4x</option>
-          </select>
-          <label>Format</label>
-          <select id="format">
-            <option value="PNG">PNG</option>
-            <option value="JPG">JPG</option>
-          </select>
-          <label>Export</label>
-          <label><input id="exportMask" type="checkbox" /> Mask Only</label>
-        </div>
-        <div class="control-row">
-          <label>Resolution</label>
-          <input id="outWidth" type="number" min="16" step="1" placeholder="Width" style="width: 110px" />
-          <input id="outHeight" type="number" min="16" step="1" placeholder="Height" style="width: 110px" />
-          <button id="btnUseOriginal" class="btn">Use Original</button>
-          <div class="spacer"></div>
-          <label>JPG Quality</label>
-          <input id="jpgQuality" type="range" min="60" max="100" value="95" />
-          <span id="jpgQualityVal">95</span>
-        </div>
-        <div class="control-row">
-          <button id="btnSave" class="btn success">Save Current</button>
-          <button id="btnProcessAll" class="btn gradient">Process Batch</button>
-        </div>
-        <div class="progress" id="progressWrap">
-          <div class="bar" id="progressBar"></div>
-          <div class="text" id="progressText">0%</div>
-        </div>
-      </section>
+          </details>
 
-      <section class="panel preview">
-        <div class="compare" id="compare">
-          <img id="beforeImg" alt="Before" />
-          <div class="divider" id="divider"></div>
-          <img id="afterImg" alt="After" />
+          <details>
+            <summary>Shadow</summary>
+            <div class="control-row grid2">
+              <label>Offset X</label>
+              <input id="shadowOffsetX" type="range" min="-100" max="100" value="20" />
+              <label>Offset Y</label>
+              <input id="shadowOffsetY" type="range" min="-100" max="100" value="20" />
+              <label>Blur</label>
+              <input id="shadowBlur" type="range" min="0" max="100" value="40" />
+              <label>Opacity</label>
+              <input id="shadowOpacity" type="range" min="0" max="1" step="0.05" value="0.5" />
+            </div>
+          </details>
+
+          <details>
+            <summary>Glow</summary>
+            <div class="control-row grid2">
+              <label>Color</label>
+              <input id="glowColor" type="color" value="#00ffff" />
+              <label>Radius</label>
+              <input id="glowRadius" type="range" min="1" max="80" value="20" />
+              <label>Intensity</label>
+              <input id="glowIntensity" type="range" min="0" max="1" step="0.05" value="0.6" />
+            </div>
+          </details>
+
+          <details open>
+            <summary>Output</summary>
+            <div class="control-row">
+              <label>Upscale</label>
+              <select id="upscale">
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="4">4x</option>
+              </select>
+              <label>Format</label>
+              <select id="format">
+                <option value="PNG">PNG</option>
+                <option value="JPG">JPG</option>
+              </select>
+              <label><input id="exportMask" type="checkbox" /> Mask Only</label>
+            </div>
+            <div class="control-row">
+              <label>Resolution</label>
+              <input id="outWidth" type="number" min="16" step="1" placeholder="Width" style="width: 110px" />
+              <input id="outHeight" type="number" min="16" step="1" placeholder="Height" style="width: 110px" />
+              <button id="btnUseOriginal" class="btn">Use Original</button>
+              <div class="spacer"></div>
+              <label>JPG Quality</label>
+              <input id="jpgQuality" type="range" min="60" max="100" value="95" />
+              <span id="jpgQualityVal">95</span>
+            </div>
+          </details>
         </div>
       </section>
     </main>
 
     <footer class="footer">
-      <div>Works fully offline • Modern glass UI • Background removal by rembg • Optional upscaling by Real-ESRGAN</div>
+      <div>Offline • Premium glass UI • rembg (isnet-general-use) • Optional Real-ESRGAN</div>
     </footer>
   </div>
 
+  <input id="fileInputHidden" type="file" accept="image/*" multiple hidden />
   <script src="/static/js/app.js"></script>
 </body>
 </html>
