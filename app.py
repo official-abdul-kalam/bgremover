@@ -31,6 +31,8 @@ app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATE_DIR)
 
 # Global in-memory job store (simple, single-process)
 JOBS: Dict[str, Dict[str, Any]] = {}
+# Cache for background removal results per file and model/options
+BG_CACHE: Dict[str, Tuple[Image.Image, Image.Image]] = {}
 
 # Initialize processor
 processor = ImageProcessor(model_dir=MODEL_DIR)
@@ -53,6 +55,24 @@ def _save_image_bytes(image: Image.Image, path: str, fmt: str, quality: int = 95
     else:
         image_to_save = image
     image_to_save.save(path, fmt_u, **save_kwargs)
+
+
+def _cache_key(file_id: str, opts: ProcessingOptions) -> str:
+    return (
+        f"{file_id}:{opts.rembg_model}:{int(opts.alpha_matting)}:"
+        f"{opts.alpha_matting_erode_size}:{opts.alpha_matting_foreground_threshold}:{opts.alpha_matting_background_threshold}"
+    )
+
+
+def _get_removed_bg(file_id: str, opts: ProcessingOptions) -> Tuple[Image.Image, Image.Image]:
+    key = _cache_key(file_id, opts)
+    if key in BG_CACHE:
+        return BG_CACHE[key]
+    in_path = os.path.join(UPLOAD_DIR, f"{file_id}.png")
+    image = Image.open(in_path).convert("RGBA")
+    rgba, mask = processor.remove_background(image, opts)
+    BG_CACHE[key] = (rgba, mask)
+    return rgba, mask
 
 
 @app.route("/")
@@ -84,17 +104,14 @@ def api_upload():
 
     # Generate initial preview for first file
     first_id = file_ids[0]
-    first_path = os.path.join(UPLOAD_DIR, f"{first_id}.png")
-    image = Image.open(first_path).convert("RGBA")
-    rgba, mask = processor.remove_background(image)
+    # Use default rembg options (isnet-general-use, alpha-matting)
+    default_opts = ProcessingOptions()
+    rgba, mask = _get_removed_bg(first_id, default_opts)
 
-    # Default preview options
+    # Default preview options for effects
     options = ProcessingOptions()
     preview_image = processor.apply_all(rgba, mask, options)
 
-    buf = io.BytesIO()
-    preview_image.save(buf, format="PNG")
-    buf.seek(0)
     b64 = processor.image_to_base64(preview_image, format="PNG")
     mask_b64 = processor.image_to_base64(mask, format="PNG")
 
@@ -121,8 +138,19 @@ def api_preview():
     except Exception as e:
         return jsonify({"error": f"Invalid options: {e}"}), 400
 
-    image = Image.open(path).convert("RGBA")
-    rgba, mask = processor.remove_background(image)
+    # Speed preview: reuse cached removal and optionally downscale for UI
+    rgba, mask = _get_removed_bg(file_id, options)
+
+    fast = bool(data.get("fast", True))
+    if fast:
+        max_side = 1024
+        w, h = rgba.size
+        scale = min(1.0, max_side / max(w, h))
+        if scale < 1.0:
+            new_size = (int(w * scale), int(h * scale))
+            rgba = rgba.resize(new_size, Image.LANCZOS)
+            mask = mask.resize(new_size, Image.LANCZOS)
+
     result = processor.apply_all(rgba, mask, options)
 
     fmt = "PNG" if options.output_format.upper() == "PNG" else "JPEG"
@@ -158,9 +186,7 @@ def api_process():
             JOBS[job_id]["status"] = "running"
             result_files: List[str] = []
             for idx, fid in enumerate(file_ids, start=1):
-                in_path = os.path.join(UPLOAD_DIR, f"{fid}.png")
-                image = Image.open(in_path).convert("RGBA")
-                rgba, mask = processor.remove_background(image)
+                rgba, mask = _get_removed_bg(fid, options)
                 out_img = processor.apply_all(rgba, mask, options)
                 # Upscale if requested
                 if options.upscale > 1.0:
@@ -181,7 +207,7 @@ def api_process():
                 result_files.append(out_name)
                 JOBS[job_id]["done"] = idx
                 JOBS[job_id]["progress"] = int(idx * 100 / len(file_ids))
-                time.sleep(0.01)
+                time.sleep(0.005)
 
             # Zip results
             zip_name = f"job_{job_id}.zip"

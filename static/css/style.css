@@ -114,3 +114,16 @@ label { color: var(--text-dim); font-size: 14px; }
 @media (max-width: 1024px) {
   .container { grid-template-columns: 1fr; }
 }
+
+.btn { min-height: 40px; }
+.seg { padding: 10px 14px; }
+input[type="range"]{ touch-action: none; }
+
+@media (max-width: 640px) {
+  .nav { padding: 12px; }
+  .container { padding: 0 12px 12px; }
+  .upload { min-height: 180px; }
+  .controls { gap: 10px; }
+  .control-row { gap: 10px; }
+  .divider { width: 4px; }
+}
