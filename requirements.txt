@@ -1,0 +1,10 @@
+flask==3.0.3
+rembg==2.0.57
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+# Optional upscaling (heavy). If not needed, comment these out.
+realesrgan==0.3.0
+torch>=2.1.0
+# Packaging
+pyinstaller==6.9.0
